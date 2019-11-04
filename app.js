@@ -3,6 +3,8 @@ const express = require('express');
 const bodyparser = require('body-parser');
 const expressHbs = require('express-handlebars');
 
+const db =require('./Util/database');
+
 const app = express();
 /*app.engine('hbs', expressHbs({
     layoutsDir: 'views/layouts/',

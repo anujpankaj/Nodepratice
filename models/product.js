@@ -2,19 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const roolDir = require('../Util/path');
 const cart = require('./cart');
+const db = require('../Util/database');
 
 const p = path.join(roolDir, 'data', 'product.json');
-
-const getProductFromFile = cb => {
-    fs.readFile(p, (err, filecontent) => {
-        if (err) {
-            cb([]);
-        }
-        else {
-            cb(JSON.parse(filecontent));
-        }
-    });
-}
 
 module.exports = class Product {
     constructor(id, title, imageUrl, description, price) {
@@ -24,51 +14,41 @@ module.exports = class Product {
         this.description = description;
         this.price = price;
     }
-    save() {
-
-        getProductFromFile(products => {
-            if (this.id) {
-                const existingProductIndex = products.findIndex(prod => prod.id === this.id);
-                const updatedProducts = [...products];
-                updatedProducts[existingProductIndex] = this;
-                fs.writeFile(p, JSON.stringify(updatedProducts), (err) => {
+    save(cb) {
+        db.query(
+            'INSERT INTO salesforce."Products" (title, price, description, "imageUrl") VALUES($1, $2, $3, $4);',
+             [this.title, this.price, this.description, this.imageUrl], (err, result) =>{
+                if(err){
                     console.log(err);
-                });
-            }
-            else {
-                this.id = Math.random().toString();
-                products.push(this);
-                fs.writeFile(p, JSON.stringify(products), (err) => {
-                    console.log(err);
-                });
-            }
+                    cb();
+                    return;
+                }
+                cb(result);
+             });
 
-        });
     }
-    static fetchAll(cb) {
-        getProductFromFile(cb);
+    static fetchAll(cb){
+         db.query('SELECT * FROM salesforce."Products";',(err, result) =>{
+            if(err){
+                console.log(err);
+                cb();
+                return;
+            }
+            cb(result);
+         });
     }
-
     static findById(id, cb) {
-        getProductFromFile(products => {
-            const product = products.find(p => p.id === id);
-            cb(product);
-        });
+        db.query('SELECT * FROM salesforce."Products" WHERE id = $1;', [id], (err, result) =>{
+            if(err){
+                console.log(err);
+                cb();
+                return;
+            }
+            cb(result);
+         });
     }
 
     static deleteById(Id) {
-        
-        getProductFromFile(products => {           
-            const updatedProducts = products.filter(p => p.id !== Id);
-            const product = products.find(prod => prod.id === Id);
-            fs.writeFile(p, JSON.stringify(updatedProducts), err =>{
-               if(!err){
-                 cart.deleteProduct(Id, product.price);
-               }
-             
-            });
-           
-        });
 
     }
 }
